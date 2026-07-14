@@ -46,8 +46,8 @@ export async function downloadPdf(items: SessionItem[]): Promise<void> {
   const { default: jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const PAGE_W = 297;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const PAGE_W = 210;
   const MARGIN  = 10;
 
   // ── Section 1: Summary ──────────────────────────────────────────────────────

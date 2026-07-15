@@ -1,26 +1,26 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 :root {
-  --gold:          #D4AF37;
-  --gold-light:    #E0BA4A;
+  --gold:          #C5A059;
+  --gold-light:    #E2C792;
   --gold-dim:      #8B6914;
   --bg-deep:       #FAFAFA;
   --bg-card:       #FFFFFF;
   --bg-card-hover: #F9FAFB;
-  --border:        #E5E7EB;
+  --border:        #EAE5D9;
   --border-bright: #D1D5DB;
-  --text-primary:  #111827;
-  --text-muted:    #6B7280;
-  --text-dim:      #9CA3AF;
+  --text-primary:  #2B2B2B;
+  --text-muted:    #737373;
+  --text-dim:      #A3A3A3;
   --success:       #10B981;
   --danger:        #EF4444;
-  --radius-sm:     6px;
-  --radius-md:     12px;
-  --radius-lg:     16px;
-  --shadow-gold:   0 0 24px rgba(212,175,55,0.15);
-  --shadow-card:   0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  --radius-sm:     8px;
+  --radius-md:     16px;
+  --radius-lg:     24px;
+  --shadow-gold:   0 0 24px rgba(197,160,89,0.15);
+  --shadow-card:   0 2px 8px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.02);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────── */
@@ -44,11 +44,11 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-color: #FAFAFA;
+  background-color: #FFFFFF;
   background-image: 
-    linear-gradient(to right, #F0F0F0 1px, transparent 1px),
-    linear-gradient(to bottom, #F0F0F0 1px, transparent 1px);
-  background-size: 32px 32px;
+    linear-gradient(to right, rgba(197,160,89,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(197,160,89,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
   pointer-events: none;
 }
 
@@ -132,21 +132,24 @@ html, body {
   font-size: 0.8rem;
 }
 
+.scan-table th, .scan-table td {
+  border: 1px solid var(--border);
+}
+
 .scan-table thead th {
-  background: #F9FAFB;
+  background: #FCFAF8;
   color: var(--text-muted);
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   padding: 0.65rem 0.75rem;
-  border-bottom: 1px solid var(--border-bright);
+  border-bottom: 2px solid var(--border-bright);
   text-align: center;
   white-space: nowrap;
 }
 
 .scan-table tbody tr {
-  border-bottom: 1px solid var(--border);
   transition: background 0.15s;
 }
 .scan-table tbody tr:hover { background: var(--bg-card-hover); }
@@ -320,8 +323,20 @@ html, body {
 .empty-state svg { opacity: 0.35; }
 
 /* ─── Responsive Layout ──────────────────────────────────────────────────────── */
-.dashboard-header {
-  padding: 1rem 2rem;
+.portal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 3rem auto 2rem;
+  padding: 2.5rem 2rem;
+  background: var(--bg-card);
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.02), 0 1px 4px rgba(0,0,0,0.02);
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--gold-light);
+  max-width: 680px;
+  width: 92%;
+  text-align: center;
 }
 .dashboard-main {
   padding: 1.5rem 2rem;
@@ -331,12 +346,10 @@ html, body {
 }
 
 @media (max-width: 640px) {
-  .dashboard-header {
+  .portal-header {
+    margin: 1.5rem auto 1.5rem;
     padding: 1.5rem 1.25rem;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center !important;
-    gap: 1.25rem !important;
+    border-radius: 16px;
   }
   .dashboard-main {
     padding: 0 1.25rem 1.5rem;
@@ -347,8 +360,5 @@ html, body {
   }
   .stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .action-bar {
-    justify-content: center;
   }
 }

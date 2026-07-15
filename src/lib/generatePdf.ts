@@ -57,14 +57,15 @@ export async function downloadPdf(items: SessionItem[]): Promise<void> {
   doc.setFont('helvetica', 'bold');
   doc.text('Summary', MARGIN, 16);
 
-  // Group by itemType
+  // Group by Purity
   const groups = new Map<string, { qty: number; grossWt: number; netWt: number }>();
   for (const item of items) {
-    const g = groups.get(item.itemType) ?? { qty: 0, grossWt: 0, netWt: 0 };
+    const key = `${item.metalPurity}K ${item.metalType === 'Y' ? 'Yellow' : item.metalType === 'W' ? 'White' : item.metalType === 'R' ? 'Rose' : ''} Gold`.trim();
+    const g = groups.get(key) ?? { qty: 0, grossWt: 0, netWt: 0 };
     g.qty     += item.qty;
     g.grossWt += item.grossWeight * item.qty;
     g.netWt   += item.netWeight   * item.qty;
-    groups.set(item.itemType, g);
+    groups.set(key, g);
   }
 
   let totalQty = 0, totalGross = 0, totalNet = 0;
@@ -88,7 +89,7 @@ export async function downloadPdf(items: SessionItem[]): Promise<void> {
 
   autoTable(doc, {
     startY: 20,
-    head: [['Sr.', 'Item Type', 'Qty', 'Gross Wt (g)', 'Net Wt (g)']],
+    head: [['Sr.', 'Item Details', 'Qty', 'Gross Wt (g)', 'Net Wt (g)']],
     body: summaryRows,
     margin: { left: MARGIN, right: MARGIN },
     tableWidth: PAGE_W - MARGIN * 2,
@@ -165,11 +166,43 @@ export async function downloadPdf(items: SessionItem[]): Promise<void> {
       try {
         doc.addImage(b64, 'JPEG', imgX, imgY, size, size);
       } catch {
-        // Image decode failed — leave cell blank
+        // Image decode failed
       }
     },
   });
 
-  const fileName = `BJ_Scan_${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  const now = new Date();
+  // formats as YYYY-MM-DD
+  const dateStr = now.toISOString().split('T')[0];
+  const filename = `BJ_scanned_${dateStr}.pdf`;
+
+  const pdfBlob = doc.output('blob');
+
+  // Attempt native share API first (Best for iOS/Android sharing)
+  if (typeof navigator !== 'undefined' && navigator.canShare) {
+    const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: filename,
+        });
+        return; // Success
+      } catch (e) {
+        // user cancelled or share failed, fallback
+      }
+    }
+  }
+
+  // Fallback: If not on mobile/no share API, create a temporary link to force a properly named download
+  const pdfBlobUrl = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = pdfBlobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  
+  // Also open in a new tab just in case the browser blocked the download
+  setTimeout(() => window.open(pdfBlobUrl, '_blank'), 100);
 }

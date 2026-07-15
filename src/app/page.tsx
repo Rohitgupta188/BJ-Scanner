@@ -120,6 +120,10 @@ export default function DashboardPage() {
   // ── Qty edit ────────────────────────────────────────────────────────────────
 
   const handleQtyChange = (sku: string, value: string) => {
+    if (value === '') {
+      setQtyEditing(prev => ({ ...prev, [sku]: '' as any }));
+      return;
+    }
     const n = parseInt(value, 10);
     if (isNaN(n)) return;
     setQtyEditing(prev => ({ ...prev, [sku]: n }));
@@ -138,6 +142,14 @@ export default function DashboardPage() {
     setItems(updated);
     setQtyEditing(prev => { const c = { ...prev }; delete c[sku]; return c; });
     addToast(qty <= 0 ? 'Item removed' : 'Qty updated', 'success');
+  };
+
+  const handleItemFieldChange = (sku: string, field: 'metalPurity' | 'metalType', value: string | number) => {
+    const current = readStorage();
+    const updated = current.map(i => i.sku === sku ? { ...i, [field]: value } : i);
+    writeStorage(updated);
+    setItems(updated);
+    addToast('Item updated', 'success');
   };
 
   const handleRemoveItem = (sku: string) => {
@@ -203,15 +215,17 @@ export default function DashboardPage() {
 
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Header */}
-        <header className="dashboard-header" style={{ borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(12px)', background: 'rgba(255,255,255,0.85)', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)', letterSpacing: '0.02em' }}>QR Scanner Dashboard</div>
-            </div>
-          </div>
+        {/* Header matching Screenshot Design */}
+        <header className="portal-header">
+          
 
-          <button className="btn btn-gold" onClick={handleOpenScanner} style={{ fontSize: '0.9rem' }}>
+
+          <h1 style={{ fontFamily: '"Playfair Display", serif', fontSize: '2.25rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
+            QR Scanner
+          </h1>
+          
+
+          <button className="btn btn-gold" onClick={handleOpenScanner} style={{ fontSize: '0.95rem', padding: '0.75rem 2rem', borderRadius: '99px', marginTop: '20px' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
               <circle cx="12" cy="13" r="3"/>
@@ -221,7 +235,7 @@ export default function DashboardPage() {
         </header>
 
         {/* Main */}
-        <main className="dashboard-main" style={{ flex: 1, maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, maxWidth: '1400px', margin: '0 auto', width: '100%', padding: '0 1.5rem 3rem' }}>
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
             {/* Stat cards + actions */}
@@ -240,45 +254,34 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-
-              <div className="action-bar" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button className="btn btn-gold" onClick={handleGeneratePdf} disabled={pdfLoading || items.length === 0}>
-                  {pdfLoading ? <span className="spinner" /> : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                      <path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/>
-                    </svg>
-                  )}
-                  {pdfLoading ? 'Generating…' : 'Generate PDF'}
-                </button>
-
-                <button className="btn btn-ghost" onClick={loadFromStorage} title="Refresh from storage">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                  </svg>
-                  Refresh
-                </button>
-
-                <button className="btn btn-danger" onClick={handleClear} disabled={items.length === 0}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                    <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
-                  </svg>
-                  Clear All
-                </button>
               </div>
-            </div>
 
             {/* Items table */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '0.9rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div className="card" style={{ padding: 0, overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 {items.length > 0 && <span className="pulse-dot" />}
-                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>Scanned Items</span>
-                {items.length > 0 && (
-                  <span className="badge badge-gold" style={{ marginLeft: 'auto' }}>
-                    {items.length} SKU{items.length !== 1 ? 's' : ''}
-                  </span>
-                )}
+                <span style={{ fontWeight: 600, fontSize: '1rem', fontFamily: '"Playfair Display", serif' }}>Scanned Items</span>
+                
+                {/* Actions (Moved from below stat cards) */}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none' }} onClick={handleGeneratePdf} disabled={pdfLoading || items.length === 0} title="Export PDF">
+                    {pdfLoading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/>
+                      </svg>
+                    )}
+                  </button>
+                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none' }} onClick={loadFromStorage} title="Refresh">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                    </svg>
+                  </button>
+                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none', color: 'var(--danger)' }} onClick={handleClear} disabled={items.length === 0} title="Clear All">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {items.length === 0 ? (
@@ -294,7 +297,7 @@ export default function DashboardPage() {
                   <table className="scan-table">
                     <thead>
                       <tr>
-                        <th>Sr</th><th>Image</th><th>Design No.</th><th>Type</th>
+                        <th>Sr</th><th>Image</th><th>Design No.</th>
                         <th>KT</th><th>Color</th><th>Gross Wt</th><th>Net Wt</th>
                         <th>S Wt</th><th>Qty</th><th>Total Gross</th><th></th>
                       </tr>
@@ -313,16 +316,28 @@ export default function DashboardPage() {
                                 <div style={{ width: 44, height: 44, borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '0.6rem' }}>—</div>
                               )}
                             </td>
-                            <td><span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--gold-light)' }}>{item.designNumber}</span></td>
-                            <td><span className="badge badge-dim">{item.itemType}</span></td>
-                            <td>{item.metalPurity}K</td>
+                            <td><span style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--gold-dim)' }}>{item.designNumber}</span></td>
                             <td>
-                              <span className="badge" style={{
-                                background: item.metalType === 'Y' ? 'rgba(212,175,55,0.15)' : item.metalType === 'W' ? 'rgba(200,200,220,0.15)' : 'rgba(220,100,100,0.15)',
-                                color:      item.metalType === 'Y' ? 'var(--gold)'            : item.metalType === 'W' ? '#c8c8dd'                  : '#e87070',
-                              }}>
-                                {item.metalType === 'Y' ? '🟡 Yellow' : item.metalType === 'W' ? '⬜ White' : item.metalType === 'R' ? '🔴 Rose' : item.metalType}
-                              </span>
+                              <select 
+                                value={item.metalPurity} 
+                                onChange={e => handleItemFieldChange(item.sku, 'metalPurity', parseInt(e.target.value))}
+                                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 4px', fontSize: '0.75rem', color: 'var(--text-primary)', outline: 'none' }}
+                              >
+                                <option value={22}>22K</option>
+                                <option value={18}>18K</option>
+                                <option value={9}>9K</option>
+                              </select>
+                            </td>
+                            <td>
+                              <select 
+                                value={item.metalType} 
+                                onChange={e => handleItemFieldChange(item.sku, 'metalType', e.target.value)}
+                                style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 4px', fontSize: '0.75rem', color: 'var(--text-primary)', outline: 'none' }}
+                              >
+                                <option value="Y">Y</option>
+                                <option value="R">R</option>
+                                <option value="S">S</option>
+                              </select>
                             </td>
                             <td>{item.grossWeight.toFixed(3)}</td>
                             <td>{item.netWeight.toFixed(3)}</td>
@@ -356,7 +371,7 @@ export default function DashboardPage() {
                     </tbody>
                     <tfoot>
                       <tr style={{ borderTop: '1px solid var(--border-bright)', background: 'rgba(212,175,55,0.05)' }}>
-                        <td colSpan={6} style={{ textAlign: 'right', padding: '0.65rem 0.75rem', fontWeight: 700, color: 'var(--gold)', fontSize: '0.8rem' }}>TOTALS</td>
+                        <td colSpan={5} style={{ textAlign: 'right', padding: '0.65rem 0.75rem', fontWeight: 700, color: 'var(--gold-dim)', fontSize: '0.8rem' }}>TOTALS</td>
                         <td style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-primary)' }}>{totals.grossWt.toFixed(3)}</td>
                         <td style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-primary)' }}>{totals.netWt.toFixed(3)}</td>
                         <td style={{ fontWeight: 700, textAlign: 'center', color: 'var(--text-primary)' }}>{totals.stoneWt > 0 ? totals.stoneWt.toFixed(3) : '—'}</td>

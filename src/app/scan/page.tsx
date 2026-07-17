@@ -41,30 +41,29 @@ function readItems(): SessionItem[] {
 
 function saveItem(incoming: SessionItem) {
   const items = readItems();
-  const idx   = items.findIndex(i => i.sku === incoming.sku);
-  if (idx !== -1) {
-    items[idx].qty += 1;
-  } else {
+  const idx = items.findIndex(i => i.sku === incoming.sku);
+  if (idx === -1) {
     items.push(incoming);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    return incoming;
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  return idx !== -1 ? items[idx] : incoming;
+  return items[idx]; // already exists — leave qty untouched
 }
 
 // ─── Scanner page ─────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
   const router = useRouter();
-  const videoRef      = useRef<HTMLVideoElement>(null);
-  const canvasRef     = useRef<HTMLCanvasElement>(null);
-  const animFrameRef  = useRef<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animFrameRef = useRef<number | null>(null);
   const lastScannedRef = useRef<{ sku: string; time: number } | null>(null);
-  const detectorRef   = useRef<any>(null);
+  const detectorRef = useRef<any>(null);
 
   const [cameraReady, setCameraReady] = useState(false);
-  const [facingMode, setFacingMode]   = useState<'environment' | 'user'>('environment');
-  const [status, setStatus]           = useState<ScanStatus>('idle');
-  const [toasts, setToasts]           = useState<Toast[]>([]);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [status, setStatus] = useState<ScanStatus>('idle');
+  const [toasts, setToasts] = useState<Toast[]>([]);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const toastKey = useRef(0);
 
@@ -79,12 +78,21 @@ export default function ScannerPage() {
   // ── Submit SKU ─────────────────────────────────────────────────────────────
 
   const submitSku = useCallback(async (sku: string) => {
+    // Already scanned this session → block re-scan (qty is managed on dashboard)
+    const existing = readItems().find(i => i.sku === sku);
+    if (existing) {
+      setStatus('incremented'); // reuse blue flash as "already scanned" feedback
+      addToast(`Already scanned: ${existing.designNumber} — use +/− on dashboard`, 'incremented');
+      setTimeout(() => setStatus('idle'), 1000);
+      return;
+    }
+
     setStatus('scanning');
     try {
-      const res  = await fetch('/api/scan', {
-        method:  'POST',
+      const res = await fetch('/api/scan', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ sku }),
+        body: JSON.stringify({ sku }),
       });
       const data = await res.json();
 
@@ -94,17 +102,9 @@ export default function ScannerPage() {
         return;
       }
 
-      // Save to localStorage (increments qty if already exists)
-      const saved    = saveItem(data.item as SessionItem);
-      const isNewSku = saved.qty === 1;
-
-      if (isNewSku) {
-        setStatus('success');
-        addToast(`Added: ${saved.designNumber} — ${saved.itemType}`, 'success');
-      } else {
-        setStatus('incremented');
-        addToast(`Qty +1 → ${saved.designNumber} (×${saved.qty})`, 'incremented');
-      }
+      const saved = saveItem(data.item as SessionItem);
+      setStatus('success');
+      addToast(`Added: ${saved.designNumber} — ${saved.itemType}`, 'success');
     } catch {
       setStatus('error');
       addToast('Network error. Check connection.', 'error');
@@ -152,14 +152,14 @@ export default function ScannerPage() {
       // Method B: jsQR fallback
       if (!sku && canvasRef.current) {
         const canvas = canvasRef.current;
-        const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) {
-          canvas.width  = video.videoWidth;
+          canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           try {
-            const jsQR  = (await import('jsqr')).default;
+            const jsQR = (await import('jsqr')).default;
             const result = jsQR(imageData.data, imageData.width, imageData.height);
             if (result) sku = result.data;
           } catch { /* jsQR not available */ }
@@ -168,7 +168,7 @@ export default function ScannerPage() {
 
       // Dedup & submit
       if (sku) {
-        const now  = Date.now();
+        const now = Date.now();
         const last = lastScannedRef.current;
         if (!last || last.sku !== sku || now - last.time >= 2000) {
           lastScannedRef.current = { sku, time: now };
@@ -199,15 +199,15 @@ export default function ScannerPage() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
-          
+
           if (!mounted) return;
           setCameraReady(true);
           startScanLoop();
         }
       } catch (err: any) {
         if (!mounted || err.name === 'AbortError') return;
-        
-        if (err.name === 'NotAllowedError')  setCameraError('Camera permission denied. Please allow and reload.');
+
+        if (err.name === 'NotAllowedError') setCameraError('Camera permission denied. Please allow and reload.');
         else if (err.name === 'NotFoundError') setCameraError('No camera found on this device.');
         else setCameraError(`Camera error: ${err.message}`);
       }
@@ -229,10 +229,10 @@ export default function ScannerPage() {
   // ── Flash colour ───────────────────────────────────────────────────────────
 
   const flashColor =
-    status === 'success'     ? 'rgba(34,197,94,0.3)'  :
-    status === 'incremented' ? 'rgba(96,165,250,0.3)'  :
-    status === 'not_found' || status === 'error' ? 'rgba(239,68,68,0.3)' :
-    'transparent';
+    status === 'success' ? 'rgba(34,197,94,0.3)' :
+      status === 'incremented' ? 'rgba(96,165,250,0.3)' :
+        status === 'not_found' || status === 'error' ? 'rgba(239,68,68,0.3)' :
+          'transparent';
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -260,28 +260,28 @@ export default function ScannerPage() {
       </div>
 
       {/* Header */}
-      <div className="scan-header" style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div className="scan-header" style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         <div>
           <div style={{ fontWeight: 700, color: '#ffffff', fontSize: '1rem', textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}>QR Scanner</div>
           <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '1px' }}>Point camera at product QR code</div>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.45)', borderRadius: '99px', padding: '0.3rem 0.75rem', backdropFilter: 'blur(8px)' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(0,0,0,0.5)', borderRadius: '99px', padding: '0.5rem 0.9rem', backdropFilter: 'blur(8px)', flexShrink: 0 }}>
             {cameraReady && <span className="pulse-dot" />}
-            <span style={{ fontSize: '0.72rem', color: '#fff' }}>{cameraReady ? 'Live' : 'Starting…'}</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>{cameraReady ? 'Live' : 'Starting…'}</span>
           </div>
           <button
             onClick={() => setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')}
-            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '99px', color: '#fff', fontSize: '0.72rem', padding: '0.3rem 0.75rem', cursor: 'pointer', backdropFilter: 'blur(8px)' }}
+            style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '99px', color: '#fff', fontSize: '0.9rem', fontWeight: 600, padding: '0.5rem 0.9rem', cursor: 'pointer', backdropFilter: 'blur(8px)', flexShrink: 0, whiteSpace: 'nowrap' }}
             title="Switch Camera"
           >
             🔄 Flip
           </button>
           <button
             onClick={() => router.push('/')}
-            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '99px', color: '#fff', fontSize: '0.72rem', padding: '0.3rem 0.75rem', cursor: 'pointer', backdropFilter: 'blur(8px)' }}
+            style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '99px', color: '#fff', fontSize: '0.9rem', fontWeight: 600, padding: '0.5rem 0.9rem', cursor: 'pointer', backdropFilter: 'blur(8px)', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
-            ← Back to Dashboard
+            ← Dashboard
           </button>
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function ScannerPage() {
       )}
 
       {/* Bottom hint */}
-      <div style={{ position: 'absolute', bottom: '2rem', left: 0, right: 0, textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>
+      <div style={{ position: 'absolute', bottom: '2rem', left: 0, right: 0, textAlign: 'center', fontSize: '1.05rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>
         {status === 'scanning' ? '⏳ Processing…' : 'Scan automatically — no button needed'}
       </div>
 
@@ -307,7 +307,7 @@ export default function ScannerPage() {
         {toasts.map(t => (
           <div key={t.key} className="fade-in" style={{
             background: t.status === 'success' ? 'rgba(34,197,94,0.92)' : t.status === 'incremented' ? 'rgba(96,165,250,0.92)' : 'rgba(239,68,68,0.92)',
-            color: '#fff', borderRadius: '10px', padding: '0.65rem 1.1rem', fontSize: '0.85rem', fontWeight: 500, width: '100%', textAlign: 'center', backdropFilter: 'blur(8px)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            color: '#fff', borderRadius: '12px', padding: '0.9rem 1.3rem', fontSize: '1rem', fontWeight: 600, width: '100%', textAlign: 'center', backdropFilter: 'blur(8px)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
           }}>
             {t.status === 'success' ? '✅ ' : t.status === 'incremented' ? '🔄 ' : '❌ '}
             {t.message}

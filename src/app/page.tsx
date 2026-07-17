@@ -271,26 +271,31 @@ export default function DashboardPage() {
 
             {/* Items table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                {items.length > 0 && <span className="pulse-dot" />}
-                <span style={{ fontWeight: 400, fontSize: '1rem', fontFamily: '"DM Serif Display", serif' }}>Scanned Items</span>
+              <div style={{ padding: '1.1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {items.length > 0 && <span className="pulse-dot" style={{ flexShrink: 0 }} />}
+                <span style={{ fontWeight: 400, fontSize: '1.05rem', fontFamily: '"DM Serif Display", serif', whiteSpace: 'nowrap' }}>Scanned Items</span>
 
-                {/* Actions (Moved from below stat cards) */}
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none' }} onClick={handleGeneratePdf} disabled={pdfLoading || items.length === 0} title="Export PDF">
-                    {pdfLoading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3" />
+                {/* Actions */}
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.35rem', alignItems: 'center', flexShrink: 0 }}>
+                  <button className="btn btn-gold pdf-btn" onClick={handleGeneratePdf} disabled={pdfLoading || items.length === 0} title="Export PDF">
+                    {pdfLoading ? (
+                      <span className="spinner" style={{ width: 18, height: 18, borderColor: 'rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
+                    ) : (
+                      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <path d="M14 2v6h6" />
+                        <path d="M12 18v-6M9 15l3 3 3-3" />
                       </svg>
                     )}
+                    <span className="pdf-btn-label">PDF</span>
                   </button>
-                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none' }} onClick={loadFromStorage} title="Refresh">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <button className="btn btn-ghost" style={{ padding: '0.25rem', border: 'none' }} onClick={loadFromStorage} title="Refresh">
+                    <svg width="18" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                     </svg>
                   </button>
-                  <button className="btn btn-ghost" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: 'none', color: 'var(--danger)' }} onClick={handleClear} disabled={items.length === 0} title="Clear All">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <button className="btn btn-ghost" style={{ padding: '0.45rem', border: 'none', color: 'var(--danger)' }} onClick={handleClear} disabled={items.length === 0} title="Clear All">
+                    <svg width="19" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6M9 6V4h6v2" />
                     </svg>
                   </button>
